@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AuthVault — Authentication System</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f0e8; --surface: #ffffff; --border: #e0d8cc;
+      --accent: #1a1a2e; --accent2: #e63946; --text: #1a1a2e;
+      --muted: #8a8070; --success: #2d6a4f; --error: #e63946; --radius: 10px;
+    }
+    body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 50px 20px 80px; }
+    body::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(26,26,46,0.03) 40px, rgba(26,26,46,0.03) 41px), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(26,26,46,0.03) 40px, rgba(26,26,46,0.03) 41px); pointer-events: none; z-index: 0; }
+
+    header { text-align: center; margin-bottom: 40px; position: relative; z-index: 1; animation: fadeDown 0.6s ease both; }
+    .logo-tag { display: inline-block; font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: var(--accent2); border: 1px solid var(--accent2); padding: 4px 14px; border-radius: 2px; margin-bottom: 16px; }
+    h1 { font-family: 'DM Serif Display', serif; font-size: clamp(42px, 7vw, 72px); letter-spacing: -2px; color: var(--accent); line-height: 1; }
+    .subtitle { margin-top: 10px; font-size: 12px; color: var(--muted); letter-spacing: 1px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 0; margin-bottom: 0; position: relative; z-index: 1; width: 100%; max-width: 480px; }
+    .tab { flex: 1; padding: 12px; text-align: center; font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; background: var(--border); border: 1px solid var(--border); color: var(--muted); transition: all 0.2s; }
+    .tab:first-child { border-radius: var(--radius) 0 0 0; }
+    .tab:last-child { border-radius: 0 var(--radius) 0 0; }
+    .tab.active { background: var(--surface); color: var(--accent); border-bottom-color: var(--surface); font-weight: 500; }
+
+    /* Card */
+    .card { background: var(--surface); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 32px; width: 100%; max-width: 480px; position: relative; z-index: 1; animation: fadeUp 0.5s ease both; box-shadow: 0 8px 32px rgba(26,26,46,0.08); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .field { margin-bottom: 18px; }
+    .field label { display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .field input, .field select { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; padding: 12px 14px; outline: none; transition: border-color 0.2s; }
+    .field input:focus, .field select:focus { border-color: var(--accent); }
+    .field input::placeholder { color: var(--muted); }
+
+    button.submit-btn { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; padding: 14px; cursor: pointer; letter-spacing: 1px; transition: transform 0.15s, box-shadow 0.15s; margin-top: 4px; }
+    button.submit-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(26,26,46,0.2); }
+    button.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .response-box { margin-top: 20px; border-radius: var(--radius); padding: 16px; font-size: 12px; line-height: 1.8; display: none; border: 1px solid; }
+    .response-box.show { display: block; }
+    .response-box.success { background: rgba(45,106,79,0.06); border-color: rgba(45,106,79,0.3); color: var(--success); }
+    .response-box.error { background: rgba(230,57,70,0.06); border-color: rgba(230,57,70,0.3); color: var(--error); }
+
+    /* Token display */
+    .token-box { margin-top: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 11px; word-break: break-all; color: var(--muted); }
+    .token-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+    .copy-token { margin-top: 8px; background: none; border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 10px; padding: 5px 12px; cursor: pointer; transition: background 0.2s, color 0.2s; }
+    .copy-token:hover { background: var(--accent); color: #fff; }
+
+    /* Protected test section */
+    .protected-section { width: 100%; max-width: 480px; margin-top: 24px; position: relative; z-index: 1; animation: fadeUp 0.6s 0.2s ease both; }
+    .section-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .route-grid { display: flex; flex-direction: column; gap: 10px; }
+    .route-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(26,26,46,0.04); }
+    .route-method { font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 4px; background: rgba(26,26,46,0.08); color: var(--accent); white-space: nowrap; }
+    .route-path { font-size: 12px; color: var(--text); flex: 1; }
+    .route-role { font-size: 10px; color: var(--accent2); border: 1px solid var(--accent2); padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+    .test-btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; font-family: 'DM Mono', monospace; font-size: 10px; padding: 6px 12px; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; }
+    .test-btn:hover { opacity: 0.85; }
+    .route-result { width: 100%; font-size: 11px; margin-top: 8px; padding: 8px 10px; border-radius: 6px; display: none; }
+    .route-result.show { display: block; }
+    .route-result.ok { background: rgba(45,106,79,0.06); color: var(--success); }
+    .route-result.fail { background: rgba(230,57,70,0.06); color: var(--error); }
+
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeUp   { from { opacity: 0; transform: translateY(16px);  } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-tag">Week 2 · Auth & Authorization</div>
+  <h1>AuthVault.</h1>
+  <p class="subtitle">// register · login · jwt · rbac</p>
+</header>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('register')">Register</div>
+  <div class="tab" onclick="switchTab('login')">Login</div>
+</div>
+
+<div class="card">
+  <!-- Register Panel -->
+  <div class="panel active" id="registerPanel">
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="regEmail" placeholder="you@example.com" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="regPassword" placeholder="min 6 characters" />
+    </div>
+    <div class="field">
+      <label>Role</label>
+      <select id="regRole">
+        <option value="user">user</option>
+        <option value="admin">admin</option>
+      </select>
+    </div>
+    <button class="submit-btn" onclick="register()">Register →</button>
+    <div class="response-box" id="regResponse"></div>
+  </div>
+
+  <!-- Login Panel -->
+  <div class="panel" id="loginPanel">
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="you@example.com" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="your password" />
+    </div>
+    <button class="submit-btn" onclick="login()">Login →</button>
+    <div class="response-box" id="loginResponse"></div>
+    <div id="tokenSection" style="display:none">
+      <div class="token-box">
+        <div class="token-label">JWT Token</div>
+        <div id="tokenDisplay"></div>
+      </div>
+      <button class="copy-token" onclick="copyToken()">Copy Token</button>
+    </div>
+  </div>
+</div>
+
+<!-- Protected Routes Tester -->
+<div class="protected-section">
+  <div class="section-title">// Test Protected Routes</div>
+  <div class="route-grid">
+    <div class="route-item" style="flex-wrap:wrap">
+      <span class="route-method">GET</span>
+      <span class="route-path">/api/profile</span>
+      <span class="route-role">any role</span>
+      <button class="test-btn" onclick="testRoute('/api/profile', 'profileResult')">Test</button>
+      <div class="route-result" id="profileResult"></div>
+    </div>
+    <div class="route-item" style="flex-wrap:wrap">
+      <span class="route-method">GET</span>
+      <span class="route-path">/api/users</span>
+      <span class="route-role">user + admin</span>
+      <button class="test-btn" onclick="testRoute('/api/users', 'usersResult')">Test</button>
+      <div class="route-result" id="usersResult"></div>
+    </div>
+    <div class="route-item" style="flex-wrap:wrap">
+      <span class="route-method">GET</span>
+      <span class="route-path">/api/admin</span>
+      <span class="route-role">admin only</span>
+      <button class="test-btn" onclick="testRoute('/api/admin', 'adminResult')">Test</button>
+      <div class="route-result" id="adminResult"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentToken = localStorage.getItem('auth_token') || '';
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i === 0 && tab === 'register') || (i === 1 && tab === 'login')));
+    document.getElementById('registerPanel').classList.toggle('active', tab === 'register');
+    document.getElementById('loginPanel').classList.toggle('active', tab === 'login');
+  }
+
+  async function register() {
+    const email    = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const role     = document.getElementById('regRole').value;
+    const box      = document.getElementById('regResponse');
+
+    if (!email || !password) return showBox(box, 'error', 'Email and password required.');
+
+    const btn = document.querySelector('#registerPanel .submit-btn');
+    btn.disabled = true; btn.textContent = 'Registering...';
+
+    try {
+      const res  = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, role }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      showBox(box, 'success', `✓ ${data.message}\nID: ${data.userId}\nRole: ${data.role}`);
+    } catch(err) { showBox(box, 'error', '✗ ' + err.message); }
+
+    btn.disabled = false; btn.textContent = 'Register →';
+  }
+
+  async function login() {
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const box      = document.getElementById('loginResponse');
+
+    if (!email || !password) return showBox(box, 'error', 'Email and password required.');
+
+    const btn = document.querySelector('#loginPanel .submit-btn');
+    btn.disabled = true; btn.textContent = 'Logging in...';
+
+    try {
+      const res  = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      currentToken = data.token;
+      localStorage.setItem('auth_token', currentToken);
+
+      showBox(box, 'success', `✓ ${data.message}\nRole: ${data.user.role}`);
+      document.getElementById('tokenDisplay').textContent = currentToken;
+      document.getElementById('tokenSection').style.display = 'block';
+    } catch(err) { showBox(box, 'error', '✗ ' + err.message); }
+
+    btn.disabled = false; btn.textContent = 'Login →';
+  }
+
+  async function testRoute(path, resultId) {
+    const el = document.getElementById(resultId);
+    if (!currentToken) {
+      el.textContent = '✗ No token found. Please login first.';
+      el.className = 'route-result show fail'; return;
+    }
+    try {
+      const res  = await fetch(path, { headers: { 'Authorization': `Bearer ${currentToken}` } });
+      const data = await res.json();
+      el.textContent = res.ok ? `✓ ${JSON.stringify(data, null, 2)}` : `✗ ${data.error}`;
+      el.className   = `route-result show ${res.ok ? 'ok' : 'fail'}`;
+    } catch { el.textContent = '✗ Request failed.'; el.className = 'route-result show fail'; }
+  }
+
+  function copyToken() {
+    navigator.clipboard.writeText(currentToken).then(() => {
+      const btn = document.querySelector('.copy-token');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy Token', 1800);
+    });
+  }
+
+  function showBox(el, type, msg) {
+    el.textContent = msg;
+    el.className = `response-box show ${type}`;
+  }
+
+  // Restore token on load
+  if (currentToken) {
+    document.getElementById('tokenDisplay').textContent = currentToken;
+    document.getElementById('tokenSection').style.display = 'block';
+    switchTab('login');
+  }
+</script>
+</body>
+</html>
